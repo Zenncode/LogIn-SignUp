@@ -38,18 +38,9 @@ export function SignupForm() {
   const [error, setError] = useState('');
 
   const steps = [
-    {
-      title: 'Personal Information',
-      fields: ['firstName', 'lastName']
-    },
-    {
-      title: 'Account Details',
-      fields: ['email', 'password', 'confirmPassword']
-    },
-    {
-      title: 'Company Information',
-      fields: ['company']
-    }
+    { title: 'Personal Information', fields: ['firstName', 'lastName'] },
+    { title: 'Account Details', fields: ['email', 'password', 'confirmPassword'] },
+    { title: 'Company Information', fields: ['company'] }
   ];
 
   const totalSteps = steps.length;
@@ -60,15 +51,30 @@ export function SignupForm() {
     setError('');
   };
 
-  const handleNext = () => {
-    if (currentStep < totalSteps - 1) {
-      setCurrentStep(prev => prev + 1);
-    }
-  };
+  const handleNext = () => currentStep < totalSteps - 1 && setCurrentStep(prev => prev + 1);
+  const handlePrev = () => currentStep > 0 && setCurrentStep(prev => prev - 1);
 
-  const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
+  // Add this missing function
+  const handleSocialLogin = async (provider: 'google' | 'apple') => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (err) {
+      console.error(`${provider} login error:`, err);
+      setError(`${provider} authentication failed. Please try again.`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -103,35 +109,11 @@ export function SignupForm() {
         throw new Error(result.error || 'Signup failed');
       }
 
-      console.log('Signup successful:', result);
       setShowSuccess(true);
       
     } catch (err) {
-      console.error('Signup error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred during signup');
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSocialLogin = async (provider: 'google' | 'apple') => {
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: provider,
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-    } catch (err) {
-      console.error(`${provider} login error:`, err);
-      setError(`${provider} authentication failed. Please ensure you've configured the provider in your Supabase dashboard.`);
       setIsLoading(false);
     }
   };
@@ -141,105 +123,78 @@ export function SignupForm() {
     return currentFields.every(field => formData[field as keyof FormData].trim() !== '');
   };
 
-  const handleContinue = () => {
-    // Reset form or redirect to dashboard
-    setShowSuccess(false);
-    setCurrentStep(0);
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      company: ''
-    });
-  };
-
   if (showSuccess) {
-    return <SuccessPage userEmail={formData.email} onContinue={handleContinue} />;
+    return <SuccessPage userEmail={formData.email} onContinue={() => setShowSuccess(false)} />;
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full max-w-md mx-auto px-4 sm:px-0">
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-900">Create your account</h2>
-        <p className="text-gray-600 mt-2">Join thousands of users who trust our platform</p>
+      <div className="text-center mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Create your account</h2>
+        <p className="text-sm sm:text-base text-gray-600 mt-2">Join thousands of users</p>
       </div>
 
-      {/* Progress Bar */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm text-gray-500">
+      {/* Progress */}
+      <div className="space-y-2 mb-6">
+        <div className="flex justify-between text-xs sm:text-sm text-gray-500">
           <span>Step {currentStep + 1} of {totalSteps}</span>
-          <span>{Math.round(progress)}% complete</span>
+          <span>{Math.round(progress)}%</span>
         </div>
         <Progress value={progress} className="h-2" />
       </div>
 
-      {/* Social Login Options */}
+      {/* Social Login - First step only */}
       {currentStep === 0 && (
-        <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => handleSocialLogin('google')}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <Button 
+            variant="outline" 
+            className="h-11" 
+            onClick={() => handleSocialLogin('google')} 
             disabled={isLoading}
           >
-            <Chrome className="w-4 h-4 mr-2" />
-            Continue with Google
+            <Chrome className="w-4 h-4 mr-2" /> Google
           </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => handleSocialLogin('apple')}
+          <Button 
+            variant="outline" 
+            className="h-11" 
+            onClick={() => handleSocialLogin('apple')} 
             disabled={isLoading}
           >
-            <Apple className="w-4 h-4 mr-2" />
-            Continue with Apple
+            <Apple className="w-4 h-4 mr-2" /> Apple
           </Button>
-          
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">Or continue with email</span>
-            </div>
-          </div>
         </div>
       )}
 
-      {/* Error Message */}
+      {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-6">
           {error}
         </div>
       )}
 
-      {/* Form Steps */}
-      <div className="min-h-[300px]">
+      {/* Form */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
+            exit={{ opacity: 0, x: -10 }}
             className="space-y-4"
           >
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
               {steps[currentStep].title}
             </h3>
 
-            {/* Step 0: Personal Information */}
+            {/* Step 0 - Personal Information */}
             {currentStep === 0 && (
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="firstName">First Name</Label>
                   <Input
                     id="firstName"
-                    type="text"
-                    placeholder="Enter your first name"
+                    placeholder="John"
                     value={formData.firstName}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                   />
@@ -248,8 +203,7 @@ export function SignupForm() {
                   <Label htmlFor="lastName">Last Name</Label>
                   <Input
                     id="lastName"
-                    type="text"
-                    placeholder="Enter your last name"
+                    placeholder="Doe"
                     value={formData.lastName}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                   />
@@ -257,15 +211,15 @@ export function SignupForm() {
               </div>
             )}
 
-            {/* Step 1: Account Details */}
+            {/* Step 1 - Account Details */}
             {currentStep === 1 && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="john@example.com"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                   />
@@ -275,7 +229,7 @@ export function SignupForm() {
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Create a strong password"
+                    placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
                   />
@@ -285,7 +239,7 @@ export function SignupForm() {
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder="Confirm your password"
+                    placeholder="••••••••"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                   />
@@ -293,68 +247,57 @@ export function SignupForm() {
               </div>
             )}
 
-            {/* Step 2: Company Information */}
+            {/* Step 2 - Company Information */}
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="company">Company Name</Label>
                   <Input
                     id="company"
-                    type="text"
-                    placeholder="Enter your company name"
+                    placeholder="Acme Inc."
                     value={formData.company}
                     onChange={(e) => handleInputChange('company', e.target.value)}
                   />
-                </div>
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-md">
-                  <p className="text-sm text-blue-800">
-                    🎉 You're almost done! Review your information and create your account.
-                  </p>
                 </div>
               </div>
             )}
           </motion.div>
         </AnimatePresence>
+
+        {/* Navigation */}
+        <div className="flex justify-between pt-6">
+          <Button 
+            variant="outline" 
+            onClick={handlePrev} 
+            disabled={currentStep === 0 || isLoading}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
+          </Button>
+
+          {currentStep < totalSteps - 1 ? (
+            <Button 
+              onClick={handleNext} 
+              disabled={!isStepValid() || isLoading}
+            >
+              Next <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleSubmit} 
+              disabled={!isStepValid() || isLoading}
+            >
+              {isLoading ? 'Creating...' : 'Create Account'}
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Navigation Buttons */}
-      <div className="flex justify-between pt-4">
-        <Button
-          variant="outline"
-          onClick={handlePrev}
-          disabled={currentStep === 0}
-          className="flex items-center"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Previous
-        </Button>
-
-        {currentStep < totalSteps - 1 ? (
-          <Button
-            onClick={handleNext}
-            disabled={!isStepValid()}
-            className="flex items-center"
-          >
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        ) : (
-          <Button
-            onClick={handleSubmit}
-            disabled={!isStepValid() || isLoading}
-            className="flex items-center"
-          >
-            {isLoading ? 'Creating Account...' : 'Create Account'}
-          </Button>
-        )}
-      </div>
-
-      {/* Terms and Privacy */}
-      <p className="text-xs text-gray-500 text-center">
+      {/* Terms */}
+      <p className="text-xs text-center text-gray-400 mt-6">
         By creating an account, you agree to our{' '}
-        <a href="#" className="text-blue-600 hover:underline">Terms of Service</a>{' '}
+        <a href="#" className="text-indigo-600 hover:text-indigo-700">Terms</a>{' '}
         and{' '}
-        <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>
+        <a href="#" className="text-indigo-600 hover:text-indigo-700">Privacy Policy</a>
       </p>
     </div>
   );

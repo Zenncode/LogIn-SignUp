@@ -37,24 +37,25 @@ export function FormPanel() {
 
   const updateFormData = (data: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...data }))
-    setError('') // Clear error when user updates form
+    setError('')
   }
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(prev => prev + 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1)
-      setError('') // Clear error when going back
+      setError('')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
   const handleSignup = async () => {
-    // Double-check password match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
       return
@@ -64,15 +65,6 @@ export function FormPanel() {
     setError('')
 
     try {
-      console.log('Sending signup request...')
-      console.log('Form data:', {
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        company: formData.company,
-        jobTitle: formData.jobTitle
-      })
-      
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-dd01f22b/signup`, {
         method: 'POST',
         headers: {
@@ -90,19 +82,15 @@ export function FormPanel() {
       })
 
       const data = await response.json()
-      console.log('Response status:', response.status)
-      console.log('Response data:', data)
 
       if (!response.ok) {
-        throw new Error(data.error || `Signup failed with status ${response.status}`)
+        throw new Error(data.error || `Signup failed`)
       }
 
-      console.log('Signup successful:', data)
-      nextStep() // Go to success page
+      nextStep()
       
     } catch (err) {
-      console.error('Signup error details:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.')
+      setError(err instanceof Error ? err.message : 'Failed to create account')
     } finally {
       setIsLoading(false)
     }
@@ -132,7 +120,7 @@ export function FormPanel() {
           <AccountCreationStep
             formData={formData}
             updateFormData={updateFormData}
-            onNext={handleSignup}  // Ito ang mahalaga!
+            onNext={handleSignup}
             onBack={prevStep}
             isLoading={isLoading}
             error={error}
@@ -146,27 +134,46 @@ export function FormPanel() {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Join us today</h2>
-        <p className="text-gray-600">Create your account and start your journey</p>
+    <div className="w-full max-w-[400px] lg:max-w-[440px] mx-auto px-4 sm:px-0">
+      {/* Header */}
+      <div className="text-center mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+          Join us today
+        </h1>
+        <p className="text-sm sm:text-base text-gray-500">
+          Create your account and start your journey
+        </p>
       </div>
 
+      {/* Progress */}
       {currentStep < totalSteps && (
-        <StepProgress currentStep={currentStep} totalSteps={totalSteps - 1} />
+        <div className="mb-6 sm:mb-8">
+          <StepProgress currentStep={currentStep} totalSteps={totalSteps - 1} />
+        </div>
       )}
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
-        >
-          {renderStep()}
-        </motion.div>
-      </AnimatePresence>
+      {/* Form Card */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-5 sm:p-6 md:p-8 border border-gray-100">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderStep()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Footer */}
+      <p className="mt-6 text-center text-xs text-gray-400">
+        Already have an account?{' '}
+        <a href="#" className="text-indigo-600 hover:text-indigo-700 font-medium">
+          Sign in
+        </a>
+      </p>
     </div>
   )
 }
