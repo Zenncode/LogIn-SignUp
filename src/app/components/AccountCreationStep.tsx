@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react'
 import type { FormData } from './FormPanel'
 
 interface AccountCreationStepProps {
@@ -35,7 +35,7 @@ export function AccountCreationStep({
     if (!formData.password) {
       newErrors.password = 'Password is required'
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters'
+      newErrors.password = 'Must be at least 8 characters'
     }
     
     if (!formData.confirmPassword) {
@@ -49,25 +49,36 @@ export function AccountCreationStep({
   }
 
   const handleSubmit = () => {
-    if (validate()) {
-      onNext() // Call the parent's handleSignup
-    }
+    if (validate()) onNext()
   }
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-6"
+      className="space-y-5 sm:space-y-6"
     >
-      <div className="text-center mb-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Secure your account</h3>
-        <p className="text-gray-600">Create a strong password</p>
+      {/* Header */}
+      <div className="text-center space-y-1">
+        <div className="flex justify-center mb-3">
+          <div className="p-2 bg-indigo-100 rounded-full">
+            <Lock className="h-5 w-5 text-indigo-600" />
+          </div>
+        </div>
+        <h3 className="text-xl sm:text-2xl font-semibold text-gray-900">
+          Secure your account
+        </h3>
+        <p className="text-sm text-gray-500">
+          Create a strong password
+        </p>
       </div>
 
+      {/* Form Fields */}
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="password">Password</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="password" className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Password
+          </Label>
           <div className="relative">
             <Input
               id="password"
@@ -77,7 +88,7 @@ export function AccountCreationStep({
                 updateFormData({ password: e.target.value })
                 setErrors(prev => ({ ...prev, password: '' }))
               }}
-              className={errors.password ? 'border-red-500' : ''}
+              className={`pr-10 h-10 sm:h-11 ${errors.password ? 'border-red-300' : ''}`}
               placeholder="Enter your password"
               disabled={isLoading}
             />
@@ -94,12 +105,14 @@ export function AccountCreationStep({
             </button>
           </div>
           {errors.password && (
-            <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+            <p className="text-red-500 text-xs">{errors.password}</p>
           )}
         </div>
 
-        <div>
-          <Label htmlFor="confirmPassword">Confirm password</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="confirmPassword" className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Confirm password
+          </Label>
           <div className="relative">
             <Input
               id="confirmPassword"
@@ -109,7 +122,7 @@ export function AccountCreationStep({
                 updateFormData({ confirmPassword: e.target.value })
                 setErrors(prev => ({ ...prev, confirmPassword: '' }))
               }}
-              className={errors.confirmPassword ? 'border-red-500' : ''}
+              className={`pr-10 h-10 sm:h-11 ${errors.confirmPassword ? 'border-red-300' : ''}`}
               placeholder="Confirm your password"
               disabled={isLoading}
             />
@@ -126,29 +139,42 @@ export function AccountCreationStep({
             </button>
           </div>
           {errors.confirmPassword && (
-            <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+            <p className="text-red-500 text-xs">{errors.confirmPassword}</p>
           )}
         </div>
 
-        {(error || errors.submit) && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <p className="text-red-600 text-sm">{error || errors.submit}</p>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-red-600 text-xs sm:text-sm">{error}</p>
           </div>
         )}
       </div>
 
-      <div className="text-xs text-gray-500 text-center">
-        By creating an account, you agree to our{' '}
-        <a href="#" className="text-blue-600 hover:underline">Terms of Service</a>{' '}
-        and{' '}
-        <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>.
+      {/* Password Strength Indicator */}
+      <div className="space-y-1">
+        <div className="flex gap-1">
+          {[1,2,3,4].map((i) => (
+            <div
+              key={i}
+              className={`h-1 flex-1 rounded-full ${
+                formData.password.length >= i * 2 
+                  ? 'bg-green-500' 
+                  : 'bg-gray-200'
+              }`}
+            />
+          ))}
+        </div>
+        <p className="text-xs text-gray-400">
+          Use at least 8 characters
+        </p>
       </div>
 
-      <div className="flex space-x-3">
+      {/* Navigation Buttons */}
+      <div className="flex flex-col-reverse sm:flex-row gap-3">
         <Button 
           variant="outline" 
           onClick={onBack} 
-          className="flex-1" 
+          className="w-full sm:flex-1 h-10 sm:h-11"
           disabled={isLoading}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -156,7 +182,7 @@ export function AccountCreationStep({
         </Button>
         <Button 
           onClick={handleSubmit} 
-          className="flex-1" 
+          className="w-full sm:flex-1 h-10 sm:h-11 bg-indigo-600 hover:bg-indigo-700"
           disabled={isLoading}
         >
           {isLoading ? 'Creating account...' : 'Create account'}
