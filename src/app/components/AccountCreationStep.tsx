@@ -6,7 +6,6 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
-import { projectId, publicAnonKey } from '../utils/supabase/info'
 import type { FormData } from './FormPanel'
 
 interface AccountCreationStepProps {
@@ -15,6 +14,7 @@ interface AccountCreationStepProps {
   onNext: () => void
   onBack: () => void
   isLoading: boolean
+  error?: string
 }
 
 export function AccountCreationStep({ 
@@ -22,7 +22,8 @@ export function AccountCreationStep({
   updateFormData, 
   onNext, 
   onBack, 
-  isLoading 
+  isLoading,
+  error 
 }: AccountCreationStepProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showPassword, setShowPassword] = useState(false)
@@ -47,38 +48,9 @@ export function AccountCreationStep({
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async () => {
-    if (!validate()) return
-
-    try {
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-dd01f22b/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          company: formData.company
-        })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        console.error('Signup error:', data.error)
-        setErrors({ submit: data.error || 'Signup failed' })
-        return
-      }
-
-      console.log('Signup successful:', data)
-      onNext()
-    } catch (error) {
-      console.error('Signup error:', error)
-      setErrors({ submit: 'Something went wrong. Please try again.' })
+  const handleSubmit = () => {
+    if (validate()) {
+      onNext() // Call the parent's handleSignup
     }
   }
 
@@ -89,7 +61,7 @@ export function AccountCreationStep({
       className="space-y-6"
     >
       <div className="text-center mb-6">
-        <h3 className="text-xl mb-2">Secure your account</h3>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Secure your account</h3>
         <p className="text-gray-600">Create a strong password</p>
       </div>
 
@@ -101,9 +73,13 @@ export function AccountCreationStep({
               id="password"
               type={showPassword ? 'text' : 'password'}
               value={formData.password}
-              onChange={(e) => updateFormData({ password: e.target.value })}
+              onChange={(e) => {
+                updateFormData({ password: e.target.value })
+                setErrors(prev => ({ ...prev, password: '' }))
+              }}
               className={errors.password ? 'border-red-500' : ''}
               placeholder="Enter your password"
+              disabled={isLoading}
             />
             <button
               type="button"
@@ -129,9 +105,13 @@ export function AccountCreationStep({
               id="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
               value={formData.confirmPassword}
-              onChange={(e) => updateFormData({ confirmPassword: e.target.value })}
+              onChange={(e) => {
+                updateFormData({ confirmPassword: e.target.value })
+                setErrors(prev => ({ ...prev, confirmPassword: '' }))
+              }}
               className={errors.confirmPassword ? 'border-red-500' : ''}
               placeholder="Confirm your password"
+              disabled={isLoading}
             />
             <button
               type="button"
@@ -150,23 +130,35 @@ export function AccountCreationStep({
           )}
         </div>
 
-        {errors.submit && (
+        {(error || errors.submit) && (
           <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <p className="text-red-600 text-sm">{errors.submit}</p>
+            <p className="text-red-600 text-sm">{error || errors.submit}</p>
           </div>
         )}
       </div>
 
-      <div className="text-xs text-gray-500">
-        By creating an account, you agree to our Terms of Service and Privacy Policy.
+      <div className="text-xs text-gray-500 text-center">
+        By creating an account, you agree to our{' '}
+        <a href="#" className="text-blue-600 hover:underline">Terms of Service</a>{' '}
+        and{' '}
+        <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>.
       </div>
 
       <div className="flex space-x-3">
-        <Button variant="outline" onClick={onBack} className="flex-1" disabled={isLoading}>
+        <Button 
+          variant="outline" 
+          onClick={onBack} 
+          className="flex-1" 
+          disabled={isLoading}
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        <Button onClick={handleSubmit} className="flex-1" disabled={isLoading}>
+        <Button 
+          onClick={handleSubmit} 
+          className="flex-1" 
+          disabled={isLoading}
+        >
           {isLoading ? 'Creating account...' : 'Create account'}
         </Button>
       </div>

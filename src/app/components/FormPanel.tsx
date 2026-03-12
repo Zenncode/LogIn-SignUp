@@ -7,6 +7,7 @@ import { PersonalInfoStep } from './PersonalInfoStep'
 import { CompanyInfoStep } from './CompanyInfoStep'
 import { AccountCreationStep } from './AccountCreationStep'
 import { SuccessStep } from './SuccessStep'
+import { projectId, publicAnonKey } from '../utils/supabase/info'
 
 export type FormData = {
   firstName: string
@@ -30,11 +31,13 @@ export function FormPanel() {
     confirmPassword: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string>('')
 
   const totalSteps = 4
 
   const updateFormData = (data: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...data }))
+    setError('') // Clear error when user updates form
   }
 
   const nextStep = () => {
@@ -46,17 +49,60 @@ export function FormPanel() {
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1)
+      setError('') // Clear error when going back
     }
   }
 
-  const handleSubmit = async () => {
+  const handleSignup = async () => {
+    // Double-check password match
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
     setIsLoading(true)
+    setError('')
+
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      nextStep()
-    } catch (error) {
-      console.error('Signup failed:', error)
+      console.log('Sending signup request...')
+      console.log('Form data:', {
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        company: formData.company,
+        jobTitle: formData.jobTitle
+      })
+      
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-dd01f22b/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${publicAnonKey}`
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          company: formData.company,
+          jobTitle: formData.jobTitle
+        })
+      })
+
+      const data = await response.json()
+      console.log('Response status:', response.status)
+      console.log('Response data:', data)
+
+      if (!response.ok) {
+        throw new Error(data.error || `Signup failed with status ${response.status}`)
+      }
+
+      console.log('Signup successful:', data)
+      nextStep() // Go to success page
+      
+    } catch (err) {
+      console.error('Signup error details:', err)
+      setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -86,9 +132,10 @@ export function FormPanel() {
           <AccountCreationStep
             formData={formData}
             updateFormData={updateFormData}
-            onNext={handleSubmit}
+            onNext={handleSignup}  // Ito ang mahalaga!
             onBack={prevStep}
             isLoading={isLoading}
+            error={error}
           />
         )
       case 4:
@@ -101,7 +148,7 @@ export function FormPanel() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-3xl mb-2">Join us today</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Join us today</h2>
         <p className="text-gray-600">Create your account and start your journey</p>
       </div>
 
